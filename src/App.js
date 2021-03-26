@@ -1,74 +1,92 @@
-import { useState, useEffect, useRef } from "react";
-import * as faceapi from "face-api.js";
+import React, { useRef } from "react";
+import * as tf from "@tensorflow/tfjs";
+import * as facemesh from "@tensorflow-models/facemesh";
+import Webcam from "react-webcam";
+import "./App.css";
+import { drawMesh } from "./utilities";
 
 function App() {
-  const videoHeight = 480;
-  const videoWidth = 640;
-  const [initializing, setInitializing] = useState();
-  const videoRef = useRef();
-  const canvasRef = useRef();
+  const webcamRef = useRef(null);
+  const canvasRef = useRef(null);
 
-  useEffect(() => {
-    const loadModels = async () => {
-      const MODEL_URL = process.env.PUBLIC_URL + "/models";
-      setInitializing(true);
-      Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-      ]).then(startVideo);
-    };
-    loadModels();
-  }, []);
-
-  const startVideo = () => {
-    navigator.getUserMedia(
-      {
-        video: {},
-      },
-      (stream) => (videoRef.current.srcObject = stream),
-      function () {
-        console.warn("Error getting audio stream from getUserMedia");
-      }
-    );
+  // Load facemesh
+  const runFacemesh = async () => {
+    const net = await facemesh.load({
+      inputResolution: { width: 640, height: 480 },
+      scale: 0.8,
+    });
+    setInterval(() => {
+      detect(net);
+    }, 100);
   };
 
-  const handleVideoPlay = () => {
-    setInterval(async () => {
-      if (initializing) {
-        setInitializing(false);
-      }
-      const detections = await faceapi
-        .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceExpressions();
+  // Detect function
+  const detect = async (net) => {
+    if (
+      typeof webcamRef.current !== "undefined" &&
+      webcamRef.current !== null &&
+      webcamRef.current.video.readyState === 4
+    ) {
+      // Get Video Properties
+      const video = webcamRef.current.video;
+      const videoWidth = webcamRef.current.video.videoWidth;
+      const videoHeight = webcamRef.current.video.videoHeight;
 
-      console.log(detections);
+      // Set Video width
+      webcamRef.current.video.width = videoWidth;
+      webcamRef.current.video.height = videoHeight;
 
-      const resizedDetections = faceapi.resizeResults(detections, {
-        width: canvasRef.current.width,
-        height: canvasRef.current.height,
-      });
+      // Set Canvas width
 
-      faceapi.draw.drawFaceExpressions(canvasRef.current, resizedDetections);
-    }, 1000);
+      canvasRef.current.width = videoWidth;
+      canvasRef.current.height = videoHeight;
+
+      // Make detections
+
+      const face = await net.estimateFaces(video);
+      // console.log(face);
+
+      // Get canvas context for drawing
+
+      const ctx = canvasRef.current.getContext("2d");
+      drawMesh(face, ctx);
+    }
   };
+
+  runFacemesh();
 
   return (
     <div className="App">
-      <span>{initializing ? "Icializando" : "Pronto"}</span>
-      <div>
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          height={videoHeight}
-          width={videoWidth}
-          onPlay={handleVideoPlay}
+      <header className="App-header">
+        <Webcam
+          ref={webcamRef}
+          style={{
+            position: "absolute",
+            marginLeft: "auto",
+            marginRight: "auto",
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            zIndex: 9,
+            width: 640,
+            height: 480,
+          }}
         />
-        <canvas ref={canvasRef} />
-      </div>
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: "absolute",
+            marginLeft: "auto",
+            marginRight: "auto",
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            zIndex: 9,
+            width: 640,
+            height: 480,
+          }}
+        />
+      </header>
     </div>
   );
 }
