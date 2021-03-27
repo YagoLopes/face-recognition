@@ -1,15 +1,11 @@
-import * as p5 from "p5";
-import "p5/lib/addons/p5.dom";
-import * as cocoSsd from "@tensorflow-models/coco-ssd";
-import * as faceapi from "face-api.js";
+import React from "react";
+import "./App.css";
+import objectDetectionSketch from "./ObjectDetectionSketch";
 
-const MODEL_URL = "/models";
+import P5Wrapper from "react-p5-wrapper";
 
-export default function sketch(p) {
-  let capture = null;
-
-  let cocossdModel = null;
-
-  let cocoDrawings = [];
-  let faceDrawings = [];
+export default class app extends React.Component {
+  render() {
+    return <P5Wrapper sketch={objectDetectionSketch} />;
+  }
 }
