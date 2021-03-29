@@ -8,7 +8,6 @@ import { drawMesh } from "./utilities";
 function App() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
-  let timer = null;
 
   // Load facemesh
   const runFacemesh = async () => {
@@ -16,7 +15,7 @@ function App() {
       inputResolution: { width: 640, height: 480 },
       scale: 0.8,
     });
-    timer = setInterval(() => {
+    setInterval(() => {
       detect(net);
     }, 100);
   };
@@ -54,10 +53,7 @@ function App() {
     }
   };
 
-  const closeFacemesh = () => {
-    clearTimeout(timer);
-  };
-
+  runFacemesh();
   return (
     <div className="App">
       <header className="App-header">
@@ -90,12 +86,6 @@ function App() {
           }}
         />
       </header>
-      <button type="button" onClick={runFacemesh}>
-        start
-      </button>
-      <button type="button" onClick={closeFacemesh}>
-        Stop
-      </button>
     </div>
   );
 }
